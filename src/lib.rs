@@ -39,15 +39,6 @@ pub fn midi_to_freq(note: u8) -> f32 {
     27.5 * 2f32.powf((note as f32 - 21.0) / 12.0)
 }
 
-/*pub fn sleep(ms: i32) -> js_sys::Promise {
-    js_sys::Promise::new(&mut |resolve, _| {
-        web_sys::window()
-            .unwrap()
-            .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, ms)
-            .unwrap();
-    })
-}*/
-
 #[wasm_bindgen]
     pub async fn start_sequence(mut fm: FmOsc){
         while fm.sequencer_mode {
@@ -56,12 +47,6 @@ pub fn midi_to_freq(note: u8) -> f32 {
             fm.set_step((fm.step + 1) % 16);
 
             let _ = timer((30000.0/fm.get_tempo()) as i32).await;
-            //let window = web_sys::window().unwrap();
-
-            //let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(&js_sys::Function::new_no_args(""), 100000);
-
-            //let _ = sleep(100000);
-            
         }
 
     }
@@ -95,9 +80,6 @@ pub struct FmOsc {
     tempo: f32,
     sequence: [f32; 16],
     step: usize,
-
-    //Midi
-    //midi_access: web_sys::MidiAccess,
 }
 
 impl Drop for FmOsc {
@@ -125,14 +107,6 @@ impl FmOsc {
         let tempo = 120.0;
         let sequence = [440.0, 880.0,440.0, 880.0,440.0, 880.0,440.0, 880.0,440.0, 880.0,440.0, 880.0,440.0, 880.0,440.0, 880.0];
         let step = 15;
-
-        //let window = web_sys::window().unwrap();
-        //let navigator = window.navigator();
-
-        /*let midi_access_promise = navigator.request_midi_access()?;
-        let promise_result: Result<JsValue, JsValue> = Self::promise_handler(midi_access_promise).await;
-        let jsvalue_midi_access = promise_result.unwrap();
-        let midi_access = jsvalue_midi_access.dyn_into::<web_sys::MidiAccess>().unwrap();*/
 
         // Some initial settings:
         primary.set_type(OscillatorType::Sine);
@@ -198,13 +172,7 @@ impl FmOsc {
             self.set_primary_frequency(self.sequence[self.step]);
             self.set_step((self.step + 1) % 16);
 
-            let _ = timer((30000.0/self.get_tempo()) as i32).await;
-            //let window = web_sys::window().unwrap();
-
-            //let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(&js_sys::Function::new_no_args(""), 100000);
-
-            //let _ = sleep(100000);
-            
+            let _ = timer((30000.0/self.get_tempo()) as i32).await;            
         }
 
     }
@@ -341,6 +309,12 @@ impl FmOsc {
             gain = 0.0;
         }
         self.lfo_gain.gain().set_value(gain);
+    }
+
+    #[wasm_bindgen]
+    pub fn sync_lfo_with_tempo(&mut self) {
+        
+        self.lfo.frequency().set_value(self.tempo/60.0);
     }
 
     #[wasm_bindgen]
