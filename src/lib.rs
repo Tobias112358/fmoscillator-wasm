@@ -80,6 +80,10 @@ pub struct FmOsc {
     tempo: f32,
     sequence: [f32; 16],
     step: usize,
+
+    primary_on: bool,
+    frequency_on: bool,
+    lfo_on: bool,
 }
 
 impl Drop for FmOsc {
@@ -144,9 +148,12 @@ impl FmOsc {
         fm_gain.connect_with_audio_param(&primary.frequency())?;
 
         // Start the oscillators!
-        primary.start()?;
-        fm_osc.start()?;
-        lfo.start()?;  
+        //primary.start()?;
+        //fm_osc.start()?;
+        //lfo.start()?;  
+        let primary_on = false;
+        let frequency_on = false;
+        let lfo_on = false;
 
         Ok(FmOsc {
             ctx,
@@ -162,6 +169,9 @@ impl FmOsc {
             tempo,
             sequence,
             step,
+            primary_on,
+            frequency_on,
+            lfo_on
         })
     }
 
@@ -183,6 +193,92 @@ impl FmOsc {
     }
 
     #[wasm_bindgen]
+    pub fn start_primary_oscillator(&mut self) {
+        let _ = self.primary.start();
+        self.primary_on = true;
+    }
+
+    #[wasm_bindgen]
+    pub fn stop_primary_oscillator(&mut self) {
+        let _ = self.primary.stop();
+        self.primary_on = false;
+    }
+
+    #[wasm_bindgen]
+    pub fn toggle_primary_oscillator(&mut self) -> Result<(), JsValue> {
+        let is_on = self.get_primary_is_on();
+        if is_on {
+            let _ = self.primary.stop();
+        } else {
+            self.primary = self.ctx.create_oscillator()?;
+            self.primary.set_type(OscillatorType::Sine);
+            self.primary.frequency().set_value(self.sequence[self.step]);
+            self.primary.connect_with_audio_node(&self.gain)?;
+            self.fm_gain.connect_with_audio_param(&self.primary.frequency())?;
+            let _ = self.primary.start();
+        }
+        self.primary_on = !is_on;
+        Ok(())
+    }
+
+    #[wasm_bindgen]
+    pub fn start_frequency_oscillator(&mut self) {
+        let _ = self.fm_osc.start();
+        self.frequency_on = true;
+    }
+
+    #[wasm_bindgen]
+    pub fn stop_frequency_oscillator(&mut self) {
+        let _ = self.fm_osc.stop();
+        self.frequency_on = false;
+    }
+
+    #[wasm_bindgen]
+    pub fn toggle_frequency_oscillator(&mut self) -> Result<(), JsValue> {
+        let is_on = self.get_frequency_is_on();
+        if is_on {
+            let _ = self.fm_osc.stop();
+        } else {
+            self.fm_osc = self.ctx.create_oscillator()?;
+            self.fm_osc.set_type(OscillatorType::Triangle);
+            self.fm_osc.frequency().set_value(1.0);
+            self.fm_osc.connect_with_audio_node(&self.fm_gain)?;
+            let _ = self.fm_osc.start();
+        }
+        self.frequency_on = !is_on;
+        Ok(())
+    }
+
+    #[wasm_bindgen]
+    pub fn start_lfo(&mut self) {
+        let _ = self.lfo.start();
+        self.lfo_on = true;
+    }
+
+    #[wasm_bindgen]
+    pub fn stop_lfo(&mut self) {
+        let _ = self.lfo.stop();
+        self.lfo_on = false;
+    }
+
+    #[wasm_bindgen]
+    pub fn toggle_lfo(&mut self) -> Result<(), JsValue> {
+        let is_on = self.get_lfo_is_on();
+        if is_on {
+            let _ = self.lfo.stop();
+        } else {
+            self.lfo = self.ctx.create_oscillator()?;
+            self.lfo.set_type(OscillatorType::Sine);
+            self.lfo.frequency().set_value(2.0);
+            self.lfo.connect_with_audio_param(&self.gain.gain())?;
+            self.lfo.connect_with_audio_node(&self.lfo_gain)?;
+            let _ = self.lfo.start();
+        }
+        self.lfo_on = !is_on;
+        Ok(())
+    }
+
+    #[wasm_bindgen]
     pub fn toggle_sequencer_mode(&mut self) -> bool{
         self.sequencer_mode = !self.sequencer_mode;
         self.sequencer_mode
@@ -197,6 +293,21 @@ impl FmOsc {
     #[wasm_bindgen]
     pub fn get_tempo(&self) -> f32{
         self.tempo
+    }
+
+    #[wasm_bindgen]
+    pub fn get_primary_is_on(&self) -> bool{
+        self.primary_on
+    }
+
+    #[wasm_bindgen]
+    pub fn get_frequency_is_on(&self) -> bool{
+        self.frequency_on
+    }
+
+    #[wasm_bindgen]
+    pub fn get_lfo_is_on(&self) -> bool{
+        self.lfo_on
     }
 
     /*#[wasm_bindgen]
